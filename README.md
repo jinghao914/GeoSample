@@ -1,2 +1,53 @@
-Large-Scale Geospatial Raster Sampling Optimizer(大规模遥感栅格数据分层抽样优化器)这是一个针对大规模 TIF 栅格数据（如 ESA WorldCover 10m）进行高效分层随机抽样的工具。🚀 项目背景与痛点 (Problem Statement)在地理信息系统（GIS）和遥感图像处理中，从数千个高分辨率栅格文件中提取均匀分布的训练样本是一个巨大的挑战。原始的串行或简单并行方案通常会遇到以下瓶颈：I/O 灾难：尝试并发写入数千个小型 GeoPackage 文件，并在后续合并时同时打开这些文件，导致极其严重的磁盘随机读写，处理速度呈指数级下降。内存压力：传统的全量加载方法在面对 TB 级数据时会导致内存溢出（OOM）。统计偏差：简单的局部采样难以保证全局范围内不同地类的比例公平性。✨ 核心解决方案：Map-Reduce 采样架构本项目借鉴了分布式计算中的 Map-Reduce 思想，引入了两阶段蓄水池采样 (Two-Stage Reservoir Sampling) 算法，实现了从 $O(N^2)$ 到 $O(N)$ 的性能飞跃。阶段 1：Map - 并行提取与局部采样 (script_stage1_extract.py)多进程驱动：充分利用多核 CPU，每个进程独立扫描栅格文件。内存采样：在读取 .tif 的过程中直接进行蓄水池采样，仅保留每个文件内部最具代表性的样本点。二进制中间层：将局部样本及元数据保存为极小的 .pkl 文件，避免了创建大量矢量文件的磁盘开销。实时诊断：实时反馈每个文件的地类分布情况，便于监控数据异常。阶段 2：Reduce - 全局合并与精准抽样 (script_stage2_sample.py)流式合并：顺序读取第一阶段产生的中间文件，消除了磁盘寻道延迟。全局抽样：在所有样本中进行第二次公平抽样，严格确保最终样点数量符合 TARGET_SAMPLES 设定。空间优化：最终结果输出为 GeoPackage 格式，并可选配 pyogrio 引擎以获得更快的写入速度。📊 性能表现对比处理阶段原始方案 (V1-V4)优化方案 (Map-Reduce)提升幅度Stage 1 (提取)慢（受限于磁盘写入）快（受限于 CPU 与读取）~3xStage 2 (合并)极慢（受限于随机 I/O）极快（顺序读取）100x+总耗时几小时至几天几分钟至几小时数量级提升🛠️ 安装与使用环境要求pip install rasterio geopandas pandas shapely tqdm pyogrio
-快速开始配置：打开 script_stage1_extract.py，修改 RASTER_DIR 指向你的栅格文件夹。运行提取：执行 python script_stage1_extract.py。生成样本：执行 python script_stage2_sample.py（可根据提示选择提取特定地类或全部合并）。🛡️ 算法原理$$[TIF_1, TIF_2, ..., TIF_n] \xrightarrow{Parallel\ Map} [PKL_1, PKL_2, ..., PKL_n] \xrightarrow{Stream\ Reduce} Final\ Samples$$许可证本项目采用 MIT License 开源协议。
+大规模遥感栅格分层抽样优化器 (GeoSample Optimizer)
+
+本项目提供了一套高效、可扩展的 Python 方案，用于从大规模 TIF 栅格影像（如 ESA WorldCover 10m 数据）中提取统计学公平的分层随机样点。
+
+🚀 核心优势
+
+针对处理 TB 级遥感数据时常见的 I/O 瓶颈和内存溢出问题，本项目采用了两阶段蓄水池采样 (Two-Stage Reservoir Sampling) 算法：
+
+Map 阶段 (提取)：利用多进程并行扫描 TIF 文件，在内存中完成初步抽样，并将极其紧凑的中间结果保存为 .pkl 缓存。
+
+Reduce 阶段 (合并)：通过流式读取中间缓存，瞬间完成全局样本合并，避免了传统方案中频繁读写海量矢量文件的巨大开销。
+
+性能飞跃：在处理数千个栅格文件时，合并速度相比传统方案提升了 100倍以上。
+
+🛠️ 技术栈
+
+核心算法：分布式蓄水池采样 (Distributed Reservoir Sampling)
+
+空间处理：rasterio, geopandas, shapely
+
+高性能写入：pyogrio (基于 GDAL/OGR)
+
+并发控制：multiprocessing 与进程间同步锁
+
+📖 使用指南
+
+1. 环境准备
+
+确保您的 Python 环境中安装了必要的依赖项：
+
+pip install -r requirements.txt
+
+
+2. 第一阶段：特征提取
+
+修改 script_stage1_extract.py 中的输入路径，运行：
+
+python script_stage1_extract.py
+
+
+该脚本将并行生成中间缓存文件，并实时打印各文件的地类分布诊断信息。
+
+3. 第二阶段：最终抽样
+
+运行 script_stage2_sample.py，根据提示输入目标地类 ID（如 10 代表林地），脚本将迅速生成最终的 .gpkg 矢量文件。
+
+📊 性能表现
+
+断点续传：基于 .done 标记文件，支持意外中断后自动恢复。
+
+内存友好：无需一次性加载全量数据，内存占用恒定。
+
+本项目适用于遥感深度学习样本库构建及土地利用分类精度验证。
