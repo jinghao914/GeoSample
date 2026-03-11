@@ -47,7 +47,7 @@ python script_stage1_extract.py
 
 **3. 第二阶段：最终抽样**
 
-运行 script_stage2_sample.py，根据提示输入目标地类 ID（如 10 代表林地），脚本将迅速生成最终的 .gpkg 矢量文件。
+运行 `script_stage2_sample.py`，根据提示输入目标地类 ID（如 10 代表林地），脚本将迅速生成最终的 .gpkg 矢量文件。
 
 ## 📊 性能表现
 
@@ -56,6 +56,7 @@ python script_stage1_extract.py
 **内存友好**：无需一次性加载全量数据，内存占用恒定。
 
 本项目适用于遥感深度学习样本库构建及土地利用分类精度验证。
+
 
 
 
