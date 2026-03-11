@@ -37,9 +37,10 @@ pip install -r requirements.txt
 
 **2. 第一阶段：特征提取**
 
-修改 script_stage1_extract.py 中的输入路径，运行：
+修改 `script_stage1_extract.py` 中的输入路径，运行：
 
-```python script_stage1_extract.py```
+```bash
+python script_stage1_extract.py
 
 
 该脚本将并行生成中间缓存文件，并实时打印各文件的地类分布诊断信息。
@@ -55,6 +56,7 @@ pip install -r requirements.txt
 **内存友好**：无需一次性加载全量数据，内存占用恒定。
 
 本项目适用于遥感深度学习样本库构建及土地利用分类精度验证。
+
 
 
 
